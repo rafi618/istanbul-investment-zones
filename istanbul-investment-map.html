@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Istanbul Investment Zones — Property Quest Turkey</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0B1D3A;
+    --navy-light: #122B52;
+    --red: #C8102E;
+    --red-dark: #A00D24;
+    --gold: #C9A84C;
+    --gold-light: #E0C76F;
+    --cream: #FAF7F0;
+    --white: #FFFFFF;
+    --zone-premium: #C9A84C;
+    --zone-high: #2E86AB;
+    --zone-emerging: #28A745;
+    --zone-value: #E67E22;
+    --zone-frontier: #8E44AD;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1000;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C9A84C' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .brand-icon {
+    width: 48px; height: 48px;
+    background: var(--gold);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--navy);
+  }
+
+  .brand-text h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+
+  .brand-text p {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main-container {
+    display: flex;
+    height: calc(100vh - 90px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 340px;
+    min-width: 340px;
+    background: var(--navy);
+    border-right: 1px solid rgba(201,168,76,0.15);
+    overflow-y: auto;
+    padding: 24px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold) transparent;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+
+  .sidebar-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+
+  .sidebar-subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  /* Zone Cards */
+  .zone-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .zone-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px; height: 100%;
+    border-radius: 12px 0 0 12px;
+  }
+
+  .zone-card:hover, .zone-card.active {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.12);
+    transform: translateX(4px);
+  }
+
+  .zone-card[data-zone="premium"]::before { background: var(--zone-premium); }
+  .zone-card[data-zone="high"]::before { background: var(--zone-high); }
+  .zone-card[data-zone="emerging"]::before { background: var(--zone-emerging); }
+  .zone-card[data-zone="value"]::before { background: var(--zone-value); }
+  .zone-card[data-zone="frontier"]::before { background: var(--zone-frontier); }
+
+  .zone-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .zone-name {
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .zone-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .zone-tag {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .zone-card[data-zone="premium"] .zone-tag { background: rgba(201,168,76,0.15); color: var(--zone-premium); }
+  .zone-card[data-zone="high"] .zone-tag { background: rgba(46,134,171,0.15); color: var(--zone-high); }
+  .zone-card[data-zone="emerging"] .zone-tag { background: rgba(40,167,69,0.15); color: var(--zone-emerging); }
+  .zone-card[data-zone="value"] .zone-tag { background: rgba(230,126,34,0.15); color: var(--zone-value); }
+  .zone-card[data-zone="frontier"] .zone-tag { background: rgba(142,68,173,0.15); color: var(--zone-frontier); }
+
+  .zone-districts {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.6;
+    margin-bottom: 10px;
+    padding-left: 18px;
+  }
+
+  .zone-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-left: 18px;
+  }
+
+  .metric {
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .metric-label {
+    font-size: 9px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .metric-value {
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  /* ── MAP ── */
+  .map-container {
+    flex: 1;
+    position: relative;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+    background: #0a1628;
+  }
+
+  /* Custom Leaflet Styling */
+  .leaflet-tile-pane { filter: saturate(0.15) brightness(0.35) contrast(1.2); }
+
+  .leaflet-control-zoom a {
+    background: var(--navy) !important;
+    color: var(--gold) !important;
+    border-color: rgba(201,168,76,0.3) !important;
+  }
+
+  .leaflet-control-zoom a:hover {
+    background: var(--navy-light) !important;
+  }
+
+  .leaflet-control-attribution { display: none !important; }
+
+  /* District Marker */
+  .district-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+
+  .district-marker:hover {
+    transform: scale(1.3);
+    z-index: 9999 !important;
+    border-color: #fff;
+  }
+
+  /* Custom Popup */
+  .leaflet-popup-content-wrapper {
+    background: var(--navy) !important;
+    border: 1px solid rgba(201,168,76,0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    color: #fff !important;
+    padding: 0 !important;
+  }
+
+  .leaflet-popup-tip { background: var(--navy) !important; border: 1px solid rgba(201,168,76,0.3) !important; }
+  .leaflet-popup-close-button { color: var(--gold) !important; font-size: 20px !important; }
+
+  .popup-content {
+    padding: 16px 20px;
+    min-width: 240px;
+  }
+
+  .popup-zone-bar {
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+    margin: -1px -1px 0 -1px;
+  }
+
+  .popup-district-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 2px;
+  }
+
+  .popup-zone-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    opacity: 0.6;
+  }
+
+  .popup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .popup-stat {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .popup-stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  .popup-stat-value {
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .popup-note {
+    margin-top: 12px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.5;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 10px;
+  }
+
+  /* ── FLOATING LEGEND ── */
+  .map-legend {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    background: rgba(11,29,58,0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    z-index: 999;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .legend-item:hover { opacity: 1; }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.3);
+  }
+
+  /* ── DISTRICT INFO PANEL (bottom right) ── */
+  .info-panel {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(11,29,58,0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    z-index: 999;
+    max-width: 260px;
+  }
+
+  .info-panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+
+  .info-panel-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.5;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .main-container { flex-direction: column; }
+    .sidebar { width: 100%; min-width: unset; max-height: 45vh; }
+    .header-stats { display: none; }
+    .header { padding: 14px 20px; }
+    .map-legend { flex-wrap: wrap; gap: 10px; bottom: 12px; left: 12px; right: 12px; }
+    .info-panel { display: none; }
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .zone-card { animation: fadeInUp 0.5s ease backwards; }
+  .zone-card:nth-child(2) { animation-delay: 0.05s; }
+  .zone-card:nth-child(3) { animation-delay: 0.1s; }
+  .zone-card:nth-child(4) { animation-delay: 0.15s; }
+  .zone-card:nth-child(5) { animation-delay: 0.2s; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="brand">
+    <div class="brand-icon">PQT</div>
+    <div class="brand-text">
+      <h1>PROPERTY QUEST TURKEY</h1>
+      <p>Istanbul Investment Zone Map</p>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat">
+      <div class="stat-value">1,200+</div>
+      <div class="stat-label">Projects</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">39</div>
+      <div class="stat-label">Districts</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">$400K</div>
+      <div class="stat-label">Min. Investment</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">5</div>
+      <div class="stat-label">Zones</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-container">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-title">Investment Zones</div>
+    <div class="sidebar-subtitle">Istanbul's 39 districts classified into 5 investment zones based on ROI potential, infrastructure growth, and market demand.</div>
+
+    <!-- Zone 1 -->
+    <div class="zone-card" data-zone="premium" onclick="focusZone('premium')">
+      <div class="zone-header">
+        <div class="zone-name"><span class="zone-dot" style="background:var(--zone-premium)"></span> Premium Core</div>
+        <span class="zone-tag">Zone 1</span>
+      </div>
+      <div class="zone-districts">Beşiktaş · Şişli · Beyoğlu · Sarıyer · Bakırköy · Kadıköy · Fatih</div>
+      <div class="zone-metrics">
+        <div class="metric">
+          <div class="metric-label">Avg. Price/m²</div>
+          <div class="metric-value" style="color:var(--zone-premium)">$3,200+</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Annual ROI</div>
+          <div class="metric-value" style="color:var(--zone-premium)">12–18%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone 2 -->
+    <div class="zone-card" data-zone="high" onclick="focusZone('high')">
+      <div class="zone-header">
+        <div class="zone-name"><span class="zone-dot" style="background:var(--zone-high)"></span> High Growth</div>
+        <span class="zone-tag">Zone 2</span>
+      </div>
+      <div class="zone-districts">Başakşehir · Ataşehir · Üsküdar · Maltepe · Pendik · Kartal · Ümraniye</div>
+      <div class="zone-metrics">
+        <div class="metric">
+          <div class="metric-label">Avg. Price/m²</div>
+          <div class="metric-value" style="color:var(--zone-high)">$2,000–3,000</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Annual ROI</div>
+          <div class="metric-value" style="color:var(--zone-high)">15–25%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone 3 -->
+    <div class="zone-card" data-zone="emerging" onclick="focusZone('emerging')">
+      <div class="zone-header">
+        <div class="zone-name"><span class="zone-dot" style="background:var(--zone-emerging)"></span> Emerging Hotspots</div>
+        <span class="zone-tag">Zone 3</span>
+      </div>
+      <div class="zone-districts">Bağcılar · Küçükçekmece · Beylikdüzü · Bahçelievler · Zeytinburnu · Tuzla · Güngören · Avcılar</div>
+      <div class="zone-metrics">
+        <div class="metric">
+          <div class="metric-label">Avg. Price/m²</div>
+          <div class="metric-value" style="color:var(--zone-emerging)">$1,200–2,000</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Annual ROI</div>
+          <div class="metric-value" style="color:var(--zone-emerging)">20–35%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone 4 -->
+    <div class="zone-card" data-zone="value" onclick="focusZone('value')">
+      <div class="zone-header">
+        <div class="zone-name"><span class="zone-dot" style="background:var(--zone-value)"></span> Value Investment</div>
+        <span class="zone-tag">Zone 4</span>
+      </div>
+      <div class="zone-districts">Esenyurt · Esenler · Sultangazi · Gaziosmanpaşa · Bayrampaşa · Kağıthane · Eyüpsultan · Sultanbeyli · Sancaktepe</div>
+      <div class="zone-metrics">
+        <div class="metric">
+          <div class="metric-label">Avg. Price/m²</div>
+          <div class="metric-value" style="color:var(--zone-value)">$800–1,400</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Annual ROI</div>
+          <div class="metric-value" style="color:var(--zone-value)">25–40%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone 5 -->
+    <div class="zone-card" data-zone="frontier" onclick="focusZone('frontier')">
+      <div class="zone-header">
+        <div class="zone-name"><span class="zone-dot" style="background:var(--zone-frontier)"></span> Frontier</div>
+        <span class="zone-tag">Zone 5</span>
+      </div>
+      <div class="zone-districts">Arnavutköy · Çatalca · Silivri · Büyükçekmece · Çekmeköy · Beykoz · Şile · Adalar</div>
+      <div class="zone-metrics">
+        <div class="metric">
+          <div class="metric-label">Avg. Price/m²</div>
+          <div class="metric-value" style="color:var(--zone-frontier)">$500–1,000</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Annual ROI</div>
+          <div class="metric-value" style="color:var(--zone-frontier)">30–50%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="map"></div>
+
+    <div class="map-legend">
+      <div class="legend-item" onclick="focusZone('premium')">
+        <div class="legend-dot" style="background:var(--zone-premium)"></div>
+        Premium Core
+      </div>
+      <div class="legend-item" onclick="focusZone('high')">
+        <div class="legend-dot" style="background:var(--zone-high)"></div>
+        High Growth
+      </div>
+      <div class="legend-item" onclick="focusZone('emerging')">
+        <div class="legend-dot" style="background:var(--zone-emerging)"></div>
+        Emerging
+      </div>
+      <div class="legend-item" onclick="focusZone('value')">
+        <div class="legend-dot" style="background:var(--zone-value)"></div>
+        Value
+      </div>
+      <div class="legend-item" onclick="focusZone('frontier')">
+        <div class="legend-dot" style="background:var(--zone-frontier)"></div>
+        Frontier
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <div class="info-panel-title">How to Use</div>
+      <div class="info-panel-text">Click any district marker on the map or select a zone from the sidebar to explore investment opportunities. Each zone is color-coded by investment potential.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DISTRICT DATA ──
+const districts = [
+  // ZONE 1 — Premium Core
+  { name: "Beşiktaş", lat: 41.0430, lng: 29.0070, zone: "premium", price: "$3,800/m²", roi: "14%", rental: "$18–25/m²", note: "Luxury waterfront living. Home to iconic Bosphorus views, top universities, and premium retail. Highest demand from international buyers.", citizenship: "Yes" },
+  { name: "Şişli", lat: 41.0600, lng: 28.9870, zone: "premium", price: "$3,500/m²", roi: "15%", rental: "$16–22/m²", note: "Central business hub. Nişantaşı luxury quarter, major hospitals, and corporate headquarters. Strong rental demand year-round.", citizenship: "Yes" },
+  { name: "Beyoğlu", lat: 41.0370, lng: 28.9770, zone: "premium", price: "$3,200/m²", roi: "16%", rental: "$15–20/m²", note: "Cultural heart of Istanbul. Istiklal Avenue, Galata Tower, booming short-term rental market for tourism.", citizenship: "Yes" },
+  { name: "Sarıyer", lat: 41.1670, lng: 29.0500, zone: "premium", price: "$3,600/m²", roi: "13%", rental: "$17–24/m²", note: "North Bosphorus elite living. Gated villa communities, Belgrad Forest proximity, exclusive lifestyle.", citizenship: "Yes" },
+  { name: "Bakırköy", lat: 40.9800, lng: 28.8770, zone: "premium", price: "$3,100/m²", roi: "14%", rental: "$14–19/m²", note: "European-side coastal district. Strong transport links, marina lifestyle, established residential demand.", citizenship: "Yes" },
+  { name: "Kadıköy", lat: 40.9930, lng: 29.0260, zone: "premium", price: "$3,300/m²", roi: "15%", rental: "$15–21/m²", note: "Asian-side cultural hub. Vibrant food scene, ferry connections, young professional magnet with rising property values.", citizenship: "Yes" },
+  { name: "Fatih", lat: 41.0190, lng: 28.9400, zone: "premium", price: "$2,800/m²", roi: "16%", rental: "$13–18/m²", note: "Historic peninsula. Blue Mosque, Hagia Sophia, Grand Bazaar. Strong short-term rental yields from global tourism.", citizenship: "Yes" },
+
+  // ZONE 2 — High Growth
+  { name: "Başakşehir", lat: 41.0940, lng: 28.8040, zone: "high", price: "$2,600/m²", roi: "22%", rental: "$11–15/m²", note: "New Istanbul hub. Mega hospital, Istanbul Canal proximity, government-backed infrastructure boom.", citizenship: "Yes" },
+  { name: "Ataşehir", lat: 40.9830, lng: 29.1170, zone: "high", price: "$2,800/m²", roi: "18%", rental: "$13–17/m²", note: "Istanbul Finance Center (IFC) district. Rapid corporate migration driving demand and price appreciation.", citizenship: "Yes" },
+  { name: "Üsküdar", lat: 41.0250, lng: 29.0150, zone: "high", price: "$2,700/m²", roi: "17%", rental: "$13–18/m²", note: "Historic Asian-side gem. Marmaray metro access, Bosphorus views, family-oriented with strong resale value.", citizenship: "Yes" },
+  { name: "Maltepe", lat: 40.9340, lng: 29.1310, zone: "high", price: "$2,200/m²", roi: "20%", rental: "$10–14/m²", note: "Coastal Asian side with massive urban renewal projects. New seafront promenade boosting property values.", citizenship: "Yes" },
+  { name: "Pendik", lat: 40.8800, lng: 29.2310, zone: "high", price: "$2,000/m²", roi: "22%", rental: "$9–13/m²", note: "Sabiha Gökçen Airport proximity. Industrial-to-residential transformation creating new investment corridors.", citizenship: "Yes" },
+  { name: "Kartal", lat: 40.9060, lng: 29.1880, zone: "high", price: "$2,100/m²", roi: "21%", rental: "$10–14/m²", note: "Major urban transformation zone. E-5 and metro connectivity, new branded residences by top developers.", citizenship: "Yes" },
+  { name: "Ümraniye", lat: 41.0170, lng: 29.0930, zone: "high", price: "$2,300/m²", roi: "19%", rental: "$11–15/m²", note: "Technology corridor. Growing IT sector presence, new metro lines, and rapid residential development.", citizenship: "Yes" },
+
+  // ZONE 3 — Emerging Hotspots
+  { name: "Bağcılar", lat: 41.0390, lng: 28.8570, zone: "emerging", price: "$1,600/m²", roi: "28%", rental: "$8–12/m²", note: "Urban renewal powerhouse. Old industrial areas converting to modern residences, excellent metro connectivity.", citizenship: "Yes" },
+  { name: "Küçükçekmece", lat: 41.0000, lng: 28.7800, zone: "emerging", price: "$1,500/m²", roi: "30%", rental: "$7–11/m²", note: "Lakeside living meets new development. Mega projects, Istanbul Canal impact zone with huge upside potential.", citizenship: "Yes" },
+  { name: "Beylikdüzü", lat: 40.9830, lng: 28.6420, zone: "emerging", price: "$1,400/m²", roi: "32%", rental: "$7–10/m²", note: "Fastest-growing district. Planned city layout, marina project, and family-friendly master-planned communities.", citizenship: "Yes" },
+  { name: "Bahçelievler", lat: 41.0000, lng: 28.8600, zone: "emerging", price: "$1,700/m²", roi: "25%", rental: "$9–13/m²", note: "Central European-side location with excellent transport. Ongoing renewal projects lifting property standards.", citizenship: "Yes" },
+  { name: "Zeytinburnu", lat: 41.0050, lng: 28.9010, zone: "emerging", price: "$1,800/m²", roi: "24%", rental: "$9–13/m²", note: "Historic walls district transforming fast. Proximity to Bakırköy and city center. New luxury towers emerging.", citizenship: "Yes" },
+  { name: "Tuzla", lat: 40.8180, lng: 29.3000, zone: "emerging", price: "$1,300/m²", roi: "33%", rental: "$6–10/m²", note: "Industrial hub going residential. Shipyard area renewal, affordable entry with strong growth trajectory.", citizenship: "Yes" },
+  { name: "Güngören", lat: 41.0200, lng: 28.8800, zone: "emerging", price: "$1,500/m²", roi: "27%", rental: "$8–11/m²", note: "Compact central district with metro access. Urban renewal converting old stock to modern branded residences.", citizenship: "Yes" },
+  { name: "Avcılar", lat: 40.9800, lng: 28.7200, zone: "emerging", price: "$1,400/m²", roi: "29%", rental: "$7–10/m²", note: "University district with coastal access. Earthquake-safe new builds replacing older stock at pace.", citizenship: "Yes" },
+
+  // ZONE 4 — Value Investment
+  { name: "Esenyurt", lat: 41.0280, lng: 28.6720, zone: "value", price: "$900/m²", roi: "35%", rental: "$5–8/m²", note: "Highest volume district. Budget-friendly entry point, massive population growth, improving infrastructure.", citizenship: "Yes" },
+  { name: "Esenler", lat: 41.0430, lng: 28.8750, zone: "value", price: "$1,100/m²", roi: "30%", rental: "$6–9/m²", note: "Central location with value pricing. Bus terminal hub, renewal projects underway boosting area quality.", citizenship: "Yes" },
+  { name: "Sultangazi", lat: 41.1060, lng: 28.8670, zone: "value", price: "$1,000/m²", roi: "32%", rental: "$5–8/m²", note: "Young, growing district. Government housing projects, improving schools and healthcare facilities.", citizenship: "Yes" },
+  { name: "Gaziosmanpaşa", lat: 41.0690, lng: 28.9090, zone: "value", price: "$1,200/m²", roi: "30%", rental: "$6–9/m²", note: "Major urban transformation area. Old gecekondus replaced by modern complexes, strong government support.", citizenship: "Yes" },
+  { name: "Bayrampaşa", lat: 41.0460, lng: 28.9110, zone: "value", price: "$1,300/m²", roi: "26%", rental: "$7–10/m²", note: "Central yet affordable. Forum Istanbul shopping center, improving connectivity and commercial activity.", citizenship: "Yes" },
+  { name: "Kağıthane", lat: 41.0800, lng: 28.9710, zone: "value", price: "$1,400/m²", roi: "28%", rental: "$8–11/m²", note: "Valley district in rapid transformation. New towers with Bosphorus views, metro expansion boosting accessibility.", citizenship: "Yes" },
+  { name: "Eyüpsultan", lat: 41.0530, lng: 28.9340, zone: "value", price: "$1,200/m²", roi: "29%", rental: "$6–10/m²", note: "Historic and spiritual significance. Golden Horn waterfront renewal, Pierre Loti cable car tourism boost.", citizenship: "Yes" },
+  { name: "Sultanbeyli", lat: 40.9610, lng: 29.2620, zone: "value", price: "$850/m²", roi: "38%", rental: "$4–7/m²", note: "Lowest entry point on Asian side. Young population demographics, new school and hospital investments.", citizenship: "Yes" },
+  { name: "Sancaktepe", lat: 41.0020, lng: 29.2310, zone: "value", price: "$1,000/m²", roi: "34%", rental: "$5–8/m²", note: "Near new airport rail link. Rapid population growth, affordable new-build stock with citizenship eligibility.", citizenship: "Yes" },
+
+  // ZONE 5 — Frontier
+  { name: "Arnavutköy", lat: 41.1850, lng: 28.7400, zone: "frontier", price: "$700/m²", roi: "45%", rental: "$3–6/m²", note: "New Istanbul Airport district. Istanbul Canal starting point, massive land value appreciation expected.", citizenship: "Selective" },
+  { name: "Çatalca", lat: 41.1440, lng: 28.4610, zone: "frontier", price: "$500/m²", roi: "40%", rental: "$2–5/m²", note: "Rural gateway to Istanbul. Agricultural land conversion opportunities, long-term strategic plays.", citizenship: "Selective" },
+  { name: "Silivri", lat: 41.0740, lng: 28.2470, zone: "frontier", price: "$600/m²", roi: "38%", rental: "$3–5/m²", note: "Coastal western frontier. Summer home market, new highway connectivity, resort-style developments emerging.", citizenship: "Selective" },
+  { name: "Büyükçekmece", lat: 41.0200, lng: 28.5800, zone: "frontier", price: "$800/m²", roi: "35%", rental: "$4–7/m²", note: "Lakeside and coastal living. Growing residential community, improving infrastructure and commercial zones.", citizenship: "Yes" },
+  { name: "Çekmeköy", lat: 41.0330, lng: 29.1800, zone: "frontier", price: "$900/m²", roi: "32%", rental: "$5–8/m²", note: "Forest-side Asian district. Nature-oriented living, new metro line access, family-focused communities.", citizenship: "Yes" },
+  { name: "Beykoz", lat: 41.1300, lng: 29.1000, zone: "frontier", price: "$1,000/m²", roi: "28%", rental: "$6–9/m²", note: "Bosphorus's hidden gem. Protected green zones, exclusive waterfront properties, limited but premium supply.", citizenship: "Selective" },
+  { name: "Şile", lat: 41.1760, lng: 29.6100, zone: "frontier", price: "$550/m²", roi: "35%", rental: "$3–5/m²", note: "Black Sea coastal escape. Summer tourism economy, beach properties, and eco-living developments.", citizenship: "Selective" },
+  { name: "Adalar", lat: 40.8760, lng: 29.0930, zone: "frontier", price: "$1,200/m²", roi: "20%", rental: "$8–14/m²", note: "Princes' Islands. Unique car-free lifestyle, heritage properties, limited supply driving exclusivity.", citizenship: "Selective" },
+];
+
+const zoneColors = {
+  premium: '#C9A84C',
+  high: '#2E86AB',
+  emerging: '#28A745',
+  value: '#E67E22',
+  frontier: '#8E44AD'
+};
+
+const zoneLabels = {
+  premium: 'Premium Core — Zone 1',
+  high: 'High Growth — Zone 2',
+  emerging: 'Emerging Hotspot — Zone 3',
+  value: 'Value Investment — Zone 4',
+  frontier: 'Frontier — Zone 5'
+};
+
+// ── INIT MAP ──
+const map = L.map('map', {
+  center: [41.015, 28.95],
+  zoom: 11,
+  zoomControl: true,
+  attributionControl: false
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 18
+}).addTo(map);
+
+// Remove the tile filter since CartoDB dark tiles already look great
+document.querySelector('.leaflet-tile-pane').style.filter = 'saturate(0.3) brightness(0.6)';
+
+// ── MARKERS ──
+const markers = {};
+
+districts.forEach(d => {
+  const color = zoneColors[d.zone];
+  const size = d.zone === 'premium' ? 38 : d.zone === 'high' ? 34 : 30;
+
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="district-marker" style="
+      width:${size}px; height:${size}px;
+      background: radial-gradient(circle at 30% 30%, ${color}dd, ${color}88);
+      box-shadow: 0 0 ${size/2}px ${color}44, 0 2px 8px rgba(0,0,0,0.4);
+    "></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2]
+  });
+
+  const popupHtml = `
+    <div class="popup-zone-bar" style="background:${color}"></div>
+    <div class="popup-content">
+      <div class="popup-district-name">${d.name}</div>
+      <div class="popup-zone-label">${zoneLabels[d.zone]}</div>
+      <div class="popup-grid">
+        <div class="popup-stat">
+          <div class="popup-stat-label">Avg. Price</div>
+          <div class="popup-stat-value" style="color:${color}">${d.price}</div>
+        </div>
+        <div class="popup-stat">
+          <div class="popup-stat-label">Annual ROI</div>
+          <div class="popup-stat-value" style="color:${color}">${d.roi}</div>
+        </div>
+        <div class="popup-stat">
+          <div class="popup-stat-label">Rental Yield</div>
+          <div class="popup-stat-value" style="color:${color}">${d.rental}</div>
+        </div>
+        <div class="popup-stat">
+          <div class="popup-stat-label">Citizenship</div>
+          <div class="popup-stat-value" style="color:${color}">${d.citizenship}</div>
+        </div>
+      </div>
+      <div class="popup-note">${d.note}</div>
+    </div>
+  `;
+
+  const marker = L.marker([d.lat, d.lng], { icon })
+    .addTo(map)
+    .bindPopup(popupHtml, { maxWidth: 300, className: '' })
+    .bindTooltip(d.name, {
+      permanent: false,
+      direction: 'top',
+      className: 'district-tooltip',
+      offset: [0, -size/2 - 4]
+    });
+
+  if (!markers[d.zone]) markers[d.zone] = [];
+  markers[d.zone].push({ marker, data: d });
+});
+
+// ── ZONE FOCUS ──
+function focusZone(zone) {
+  // Highlight sidebar card
+  document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.zone-card[data-zone="${zone}"]`).classList.add('active');
+
+  // Zoom to zone bounds
+  const zoneMarkers = markers[zone];
+  if (zoneMarkers && zoneMarkers.length > 0) {
+    const group = L.featureGroup(zoneMarkers.map(m => m.marker));
+    map.fitBounds(group.getBounds().pad(0.15), { duration: 0.8 });
+  }
+}
+
+// ── TOOLTIP STYLES (injected) ──
+const tooltipStyle = document.createElement('style');
+tooltipStyle.textContent = `
+  .district-tooltip {
+    background: rgba(11,29,58,0.95) !important;
+    border: 1px solid rgba(201,168,76,0.4) !important;
+    color: #C9A84C !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    padding: 4px 12px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+  }
+  .district-tooltip::before {
+    border-top-color: rgba(11,29,58,0.95) !important;
+  }
+`;
+document.head.appendChild(tooltipStyle);
+</script>
+
+</body>
+</html>
